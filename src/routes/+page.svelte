@@ -8,6 +8,7 @@
     let isLoading = false;
     let deferredPrompt;
     let showInstallModal = false;
+    let suggestion = '';
 
     const apiKey = '342c5b58440e975f80a87aa6cc8529e8';
     const url = 'https://api.openweathermap.org/data/2.5';
@@ -49,6 +50,7 @@
                 throw new Error('Hava durumu verileri alınamadı.');
             }
             weatherData = await weatherResponse.json();
+            getSuggestions(weatherData); // Öneri oluşturma
 
             const forecastResponse = await fetch(
                 `${url}/forecast?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric&lang=tr`
@@ -84,6 +86,7 @@
                 throw new Error('Şehir bulunamadı.');
             }
             weatherData = await weatherResponse.json();
+            getSuggestions(weatherData); // Öneri oluşturma
 
             const forecastResponse = await fetch(
                 `${url}/forecast?q=${cityName}&appid=${apiKey}&units=metric&lang=tr`
@@ -143,6 +146,27 @@
         });
     };
 
+    const getSuggestions = (weather) => {
+        const temp = weather.main.temp;
+        const description = weather.weather[0].description.toLowerCase();
+
+        if (description.includes('yağmur')) {
+            suggestion = 'Bugün yağmur yağması bekleniyor, şemsiye almayı unutmayın.';
+        } else if (description.includes('kar')) {
+            suggestion = 'Bugün kar yağışı var, dikkatli yürümeye özen gösterin.';
+        } else if (description.includes('açık')) {
+            if (temp > 25) {
+                suggestion = 'Bugün hava sıcak, hafif giysiler giymeyi tercih edebilirsiniz.';
+            } else if (temp > 15) {
+                suggestion = 'Bugün dışarıda güzel vakit geçirmek için harika bir gün!';
+            } else {
+                suggestion = 'Hava serin, bir ceket almayı unutmayın.';
+            }
+        } else {
+            suggestion = 'Bugün hava kapalı, iç mekan aktivitelerini değerlendirebilirsiniz.';
+        }
+    };
+
     const handleSubmit = event => {
         event.preventDefault();
         getResult();
@@ -163,9 +187,24 @@
     const closeModal = () => {
         showInstallModal = false;
     };
+
+    const getIconPath = (description) => {
+        if (description.includes('parçalı')) {
+            return '/havaicon/parcalibulut.png';
+        } else if (description.includes('açık')) {
+            return '/havaicon/acik.png';
+        } else if (description.includes('kapalı')) {
+            return '/havaicon/bulutlu.png';
+        } else if (description.includes('kar')) {
+            return '/havaicon/karli.png';
+        } else if (description.includes('yağmur')) {
+            return '/havaicon/yagmurlu.png';
+        } else {
+            return '/havaicon/default.png';
+        }
+    };
 </script>
 
-<!-- Modal Yapısı -->
 {#if showInstallModal}
 <div class="fixed inset-0 flex items-center justify-center z-50">
     <div class="bg-black opacity-50 absolute inset-0"></div>
@@ -222,7 +261,7 @@
   </div>
 
   {#if isLoading}
-  <div class="mt-8 text-pink-700 text-xl">Yükleniyor...</div>
+  <div class="mt-8 text-pink-700 text-xl">Yükleniyor...  </div>
   {:else if weatherData}
   <div
     class="content w-full max-w-lg bg-white bg-opacity-70 backdrop-filter backdrop-blur-lg p-6 rounded-xl shadow-lg mt-8"
@@ -236,6 +275,7 @@
     <div class="desc text-lg sm:text-xl italic mb-2 capitalize text-gray-700">
       {weatherData.weather[0].description}
     </div>
+    <img src={getIconPath(weatherData.weather[0].description)} alt="Weather Icon" class="w-24 h-24 mx-auto mb-4" />
     <div class="minmax text-sm sm:text-base text-gray-600">
       En Yüksek: {Math.round(weatherData.main.temp_max)}°C | En Düşük: {Math.round(weatherData.main.temp_min)}°C
     </div>
@@ -250,6 +290,7 @@
       >
         <div class="date text-sm font-medium text-gray-700">{day.date}</div>
         <div class="temp text-2xl font-bold mt-2">{day.temp}°C</div>
+        <img src={getIconPath(day.description)} alt="Forecast Icon" class="w-16 h-16 mx-auto mt-2" />
         <div class="description text-sm capitalize text-gray-600 mt-1">
           {day.description}
         </div>
@@ -261,6 +302,13 @@
     </div>
   </div>
   {/if}
+
+  {#if suggestion}
+  <div class="suggestion bg-yellow-100 p-4 rounded-lg mt-6 text-center mb-4">
+    <h3 class="text-lg font-semibold">Günün Önerisi</h3>
+    <p class="text-gray-700">{suggestion}</p>
+  </div>
+  {/if}
+
   {/if}
 </div>
-
